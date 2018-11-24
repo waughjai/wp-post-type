@@ -1,0 +1,24 @@
+{
+    "name": "waughj/wp-post-type",
+    "description": "Simple class for easily creating new post types for a WordPress site.",
+    "keywords": [ "wordpress", "post", "type" ],
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Jaimeson Waugh",
+            "email": "waughjai@gmail.com"
+        }
+    ],
+    "type": "library",
+    "require": {
+		"php": ">=7.0"
+    },
+    "require-dev": {
+		"phpunit/phpunit": "6.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "WaughJ\\WPPostType\\": "src/"
+        }
+    }
+}
