@@ -3,6 +3,7 @@
 declare( strict_types = 1 );
 namespace WaughJ\WPPostType
 {
+	use WaughJ\TestArrayItemString\TestArrayItemString;
 	use WaughJ\VerifiedArguments\VerifiedArguments;
 	use WaughJ\WPMetaBox\WPMetaBox;
 
