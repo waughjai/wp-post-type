@@ -3,7 +3,7 @@
 declare( strict_types = 1 );
 namespace WaughJ\WPPostType
 {
-	use WaughJ\TestArrayItemString\TestArrayItemString;
+	use WaughJ\TestHashItem\TestHashItemString;
 	use WaughJ\VerifiedArguments\VerifiedArguments;
 	use WaughJ\WPMetaBox\WPMetaBox;
 
@@ -139,8 +139,8 @@ namespace WaughJ\WPPostType
 				$meta_box_data = $this->other_arguments->get( 'meta_boxes' );
 				foreach ( $meta_box_data as $meta_box_item )
 				{
-					$slug = TestArrayItemString( $meta_box_item, 'slug', null );
-					$name = TestArrayItemString( $meta_box_item, 'name', null );
+					$slug = TestHashItemString( $meta_box_item, 'slug', null );
+					$name = TestHashItemString( $meta_box_item, 'name', null );
 					unset( $meta_box_item[ 'slug' ], $meta_box_item[ 'name' ] );
 					if ( $name && $slug )
 					{
