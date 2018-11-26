@@ -12,7 +12,7 @@
     "type": "library",
     "require": {
 		"php": ">=7.0",
-		"waughj/wp-meta-box": "*",
+		"waughj/wp-meta-box": ">=0.1.1",
 		"waughj/verified-arguments": "*"
     },
     "require-dev": {

@@ -138,14 +138,14 @@ namespace WaughJ\WPPostType
 				$meta_box_data = $this->other_arguments->get( 'meta_boxes' );
 				foreach ( $meta_box_data as $meta_box_item )
 				{
-					$name = TestArrayItemString( $meta_box_item, 'name', null );
 					$slug = TestArrayItemString( $meta_box_item, 'slug', null );
+					$name = TestArrayItemString( $meta_box_item, 'name', null );
+					unset( $meta_box_item[ 'slug' ], $meta_box_item[ 'name' ] );
 					if ( $name && $slug )
 					{
 						$full_slug = $this->other_arguments->get( 'meta_box_prefix' ) . $slug;
-						$type = $this->slug;
-						$input_type = TestArrayItemString( $meta_box_item, 'input_type', 'text' );
-						array_push( $this->meta_boxes, new WPMetaBox( $full_slug, $name, $type, $input_type, $meta_box_item ) );
+						$meta_box_item[ 'post-type' ] = ( isset( $meta_box_item[ 'post-type' ] ) ) ? $meta_box_item[ 'post-type' ] : $this->slug;
+						array_push( $this->meta_boxes, new WPMetaBox( $full_slug, $name, $meta_box_item ) );
 					}
 				}
 			}
