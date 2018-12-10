@@ -3,7 +3,7 @@
 declare( strict_types = 1 );
 namespace WaughJ\WPPostType
 {
-	use WaughJ\TestHashItem\TestHashItemString;
+	use function WaughJ\TestHashItem\TestHashItemString;
 	use WaughJ\VerifiedArguments\VerifiedArguments;
 	use WaughJ\WPMetaBox\WPMetaBox;
 
