@@ -13,7 +13,8 @@
     "require": {
 		"php": ">=7.0",
 		"waughj/wp-meta-box": ">=0.1.3",
-		"waughj/verified-arguments": "*"
+		"waughj/verified-arguments": "*",
+		"waughj/test-hash-item": ">=1.0.1"
     },
     "require-dev": {
 		"phpunit/phpunit": "6.*"
