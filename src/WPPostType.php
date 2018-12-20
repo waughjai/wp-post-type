@@ -116,6 +116,11 @@ namespace WaughJ\WPPostType
 			return $this->slug;
 		}
 
+		public function getMetaBox( string $slug )
+		{
+			return TestHashItemExists( $this->meta_boxes, $slug, null );
+		}
+
 		public function getName() : string
 		{
 			return $this->name;
@@ -146,7 +151,7 @@ namespace WaughJ\WPPostType
 					{
 						$full_slug = $this->other_arguments->get( 'meta_box_prefix' ) . $slug;
 						$meta_box_item[ 'post-type' ] = ( isset( $meta_box_item[ 'post-type' ] ) ) ? $meta_box_item[ 'post-type' ] : $this->slug;
-						array_push( $this->meta_boxes, new WPMetaBox( $full_slug, $name, $meta_box_item ) );
+						$this->meta_boxes[ $slug ] = new WPMetaBox( $full_slug, $name, $meta_box_item );
 					}
 				}
 			}
