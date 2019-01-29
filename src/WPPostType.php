@@ -101,7 +101,7 @@ namespace WaughJ\WPPostType
 				{
 					if ( isset( $custom_toc_item[ 'function' ] ) && is_callable( $custom_toc_item[ 'function' ] ) )
 					{
-						$custom_toc_item[ 'function' ]();
+						$custom_toc_item[ 'function' ]( $column, $post_id );
 					}
 					else
 					{
