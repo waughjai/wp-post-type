@@ -2,7 +2,7 @@
     "name": "waughj/wp-post-type",
     "description": "Simple class for easily creating new post types for a WordPress site.",
     "keywords": [ "wordpress", "post", "type" ],
-    "license": "GPL-2.0-or-later",
+    "license": "AGPL-3.0-or-later",
     "authors": [
         {
             "name": "Jaimeson Waugh",
@@ -12,12 +12,12 @@
     "type": "library",
     "require": {
 		"php": ">=7.0",
-		"waughj/wp-meta-box": ">=0.1.3",
+		"waughj/wp-meta-box": ">=0.2.1",
 		"waughj/verified-arguments": "*",
-		"waughj/test-hash-item": ">=1.0.1"
+		"waughj/test-hash-item": ">=2.0.0"
     },
     "require-dev": {
-		"phpunit/phpunit": "6.*"
+		"phpunit/phpunit": "*"
     },
     "autoload": {
         "psr-4": {
