@@ -18,6 +18,7 @@ Just call constructor before admin loads. Constructor automatically calls all th
 * "meta_box_prefix": Overrides prefix that goes before slug o' each meta box slug when setting their full slug. Defaults to post type slug plus a hyphen separator.*
 * "custom_toc": Array o' hash maps for columns to add to table view o' posts o' this type. Keys given values should be "slug" & "name". "Slug" should refer to the meta box slug & "name" should refer to the heading given to that column in the view.
 * "unset_toc": Array o' default columns for admin list view to take off table.
+* "taxonomies": Array o’ tags/categories, which must be registered manually later.
 
 ## Example
 
@@ -49,6 +50,47 @@ Just call constructor before admin loads. Constructor automatically calls all th
 					'slug' => 'order',
 					'name' => 'Order'
 				]
-			]
+			],
+			'taxonomies' => [ 'cat_news' ]
 		]
 	);
+
+## Changelog
+
+### 0.4.0
+* Add simple way to add taxonomies to type
+
+### 0.3.2
+* Update TestHashItem dependency
+
+### 0.3.1
+* Make method getMetaBoxes not break due to missing function use statement
+
+### 0.3.0
+* Make table of contents row render function send column & post ID to custom function
+
+### 0.2.0
+* Add getMetaBox Method
+	* Add method for getting a meta box object by slug.
+
+### 0.1.5
+* Fix TestHashItemString Use Statement Typo
+
+### 0.1.4
+* Add TestHashItem Dependency
+
+### 0.1.3
+* Update Dependencies
+	* Require non-buggy version o' WPMetaBox.
+
+### 0.1.2
+* Fix Use Statement Bug
+	* Was missing use statement for TestHashItemString, causing function to break.
+
+### 0.1.1
+* Fix Meta Box Implementation Bug & Update Readme
+	* Called Meta Box class using ol' interface, which is no longer in use. This fixes that.
+	* Adds mo' detailed instructions to readme.
+
+### 0.1.0
+* Initial Version

@@ -46,7 +46,8 @@ class WPPostType
 				'public' => $this->other_arguments->get( 'public' ),
 				'has_archive' => $this->other_arguments->get( 'has_archive' ),
 				'supports' => $this->getSupports(),
-				'rewrite' => $this->other_arguments->get( 'rewrite' )
+				'rewrite' => $this->other_arguments->get( 'rewrite' ),
+				'taxonomies' => $this->other_arguments->get( 'taxonomies' )
 			]
 		);
 	}
@@ -174,7 +175,8 @@ class WPPostType
 				'rewrite' => [ 'value' => [ 'slug' => $slug ] ],
 				'meta_box_prefix' => [ 'value' => $slug . '-' ],
 				'custom_toc' => [ 'value' => [] ],
-				'unset_toc' => [ 'value' => [] ]
+				'unset_toc' => [ 'value' => [] ],
+				'taxonomies' => [ 'value' => [] ]
 			];
 		}
 

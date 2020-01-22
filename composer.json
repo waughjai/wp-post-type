@@ -11,7 +11,7 @@
     ],
     "type": "library",
     "require": {
-		"php": ">=7.0",
+		"php": ">=7.2",
 		"waughj/wp-meta-box": ">=0.2.1",
 		"waughj/verified-arguments": "*",
 		"waughj/test-hash-item": ">=2.0.0"
