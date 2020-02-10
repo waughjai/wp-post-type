@@ -60,9 +60,9 @@ Just call constructor before admin loads. Constructor automatically calls all th
 ## Changelog
 
 ### 0.5.0
-* Add simple way to reorder table of contents columns.
-* Turn public methods used by WordPress into closure generators to keep public interface clean.
-* Clean up & comment code.
+* Add simple way to reorder table of contents columns
+* Turn public methods used by WordPress into closure generators to keep public interface clean
+* Clean up & comment code
 
 ### 0.4.0
 * Add simple way to add taxonomies to type
@@ -78,7 +78,7 @@ Just call constructor before admin loads. Constructor automatically calls all th
 
 ### 0.2.0
 * Add getMetaBox Method
-	* Add method for getting a meta box object by slug.
+	* Add method for getting a meta box object by slug
 
 ### 0.1.5
 * Fix TestHashItemString Use Statement Typo
@@ -88,16 +88,16 @@ Just call constructor before admin loads. Constructor automatically calls all th
 
 ### 0.1.3
 * Update Dependencies
-	* Require non-buggy version o' WPMetaBox.
+	* Require non-buggy version o' WPMetaBox
 
 ### 0.1.2
 * Fix Use Statement Bug
-	* Was missing use statement for TestHashItemString, causing function to break.
+	* Was missing use statement for TestHashItemString, causing function to break
 
 ### 0.1.1
 * Fix Meta Box Implementation Bug & Update Readme
-	* Called Meta Box class using ol' interface, which is no longer in use. This fixes that.
-	* Adds mo' detailed instructions to readme.
+	* Called Meta Box class using ol' interface, which is no longer in use. This fixes that
+	* Adds mo' detailed instructions to readme
 
 ### 0.1.0
 * Initial Version
