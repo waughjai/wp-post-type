@@ -18,6 +18,7 @@ Just call constructor before admin loads. Constructor automatically calls all th
 * "meta_box_prefix": Overrides prefix that goes before slug o' each meta box slug when setting their full slug. Defaults to post type slug plus a hyphen separator.*
 * "custom_toc": Array o' hash maps for columns to add to table view o' posts o' this type. Keys given values should be "slug" & "name". "Slug" should refer to the meta box slug & "name" should refer to the heading given to that column in the view.
 * "unset_toc": Array o' default columns for admin list view to take off table.
+* "toc_order": Array o’ column keys specifying custom column order.
 * "taxonomies": Array o’ tags/categories, which must be registered manually later.
 
 ## Example
@@ -43,7 +44,7 @@ Just call constructor before admin loads. Constructor automatically calls all th
 					'input-type' => 'number'
 				]
 			],
-			'unset_toc": [ 'date' ],
+			'unset_toc": [ 'title' ],
 			'custom_toc':
 			[
 				[
@@ -51,11 +52,17 @@ Just call constructor before admin loads. Constructor automatically calls all th
 					'name' => 'Order'
 				]
 			],
+			'toc_order' => [ 'url', 'order', 'date' ],
 			'taxonomies' => [ 'cat_news' ]
 		]
 	);
 
 ## Changelog
+
+### 0.5.0
+* Add simple way to reorder table of contents columns.
+* Turn public methods used by WordPress into closure generators to keep public interface clean.
+* Clean up & comment code.
 
 ### 0.4.0
 * Add simple way to add taxonomies to type
