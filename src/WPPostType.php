@@ -16,17 +16,12 @@ class WPPostType
 
 		public function __construct( string $slug, string $name, array $args = [] )
 		{
-			$this->slug = $slug;
-			$this->name = $name;
-			$this->other_arguments = new VerifiedArguments( $args, self::argumentDefaults( $slug, $name ) );
-
-			add_action( 'init', $this->generateRegistrar() );
-			add_action( 'post_updated_messages', $this->generateMessager() );
-			if ( !empty( $this->other_arguments->get( 'custom_toc' ) ) )
-			{
-				add_filter( "manage_{$slug}_posts_columns",       $this->generateTableOfContents(), 10, 2 );
-				add_action( "manage_{$slug}_posts_custom_column", $this->generateTableOfContentsRow(), 10, 2 );
-			}
+			$this->slug = sanitize_title( $slug );
+			$this->name = sanitize_text_field( $name );
+			$this->otherArguments = new VerifiedArguments( $args, $this->generateDefaultArguments() );
+			$this->registerPostType();
+			$this->registerMessages();
+			$this->registerTableOfContents();
 			$this->registerMetaBoxes();
 		}
 
@@ -37,7 +32,7 @@ class WPPostType
 
 		public function getMetaBox( string $slug ) : ?WPMetaBox
 		{
-			return $this->meta_boxes[ $slug ] ?? null;
+			return $this->metaBoxes[ $slug ] ?? null;
 		}
 
 		public function getName() : string
@@ -47,7 +42,7 @@ class WPPostType
 
 		public function getSingularName() : string
 		{
-			return $this->other_arguments->get( 'singular_name' );
+			return $this->otherArguments->get( 'singular_name' );
 		}
 
 
@@ -57,91 +52,83 @@ class WPPostType
 	//
 	/////////////////////////////////////////////////////////
 
-		private function generateRegistrar() : callable
+		private function registerPostType() : void
 		{
-			return function()
-			{
-				register_post_type
-				(
-					$this->slug,
-					[
-						'labels' => $this->generateLabels(),
-						'public' => $this->other_arguments->get( 'public' ),
-						'has_archive' => $this->other_arguments->get( 'has_archive' ),
-						'supports' => $this->getSupports(),
-						'rewrite' => $this->other_arguments->get( 'rewrite' ),
-						'taxonomies' => $this->other_arguments->get( 'taxonomies' ),
-						'capabilities' => $this->other_arguments->get( 'capabilities' )
-					]
-				);
-			};
+			add_action
+			(
+				'init',
+				function()
+				{
+					register_post_type
+					(
+						$this->slug,
+						$this->generateArguments()
+					);
+				}
+			);
+		}
+
+		private function registerMessages() : void
+		{
+			add_action
+			(
+				'post_updated_messages',
+				fn( array $messages ) : array => array_merge( $messages, [ $this->slug => $this->generateMessagesList() ] )
+			);
 		}
 	
-		private function generateMessager() : callable
+		private function registerTableOfContents() : void
 		{
-			return function( array $messages ) : array
+			// If custom_toc set:
+			if ( !empty( $this->otherArguments->get( 'custom_toc' ) ) )
 			{
-				global $post, $post_ID;
-				$messages[ $this->slug ] =
-				[
-					0 => '', // Unused. Messages start @ index 1.
-					1 => sprintf( __( $this->other_arguments->get( 'singular_name' ) . ' updated. <a href="%s">View ' . $this->other_arguments->get( 'singular_name' ) . '</a>' ), esc_url( get_permalink( $post_ID ) ) ),
-					2 => __( $this->other_arguments->get( 'singular_name' ) . ' updated.' ),
-					3 => __( $this->other_arguments->get( 'singular_name' ) . ' deleted.' ),
-					4 => __( $this->other_arguments->get( 'singular_name' ) . ' updated.' ),
-					5 => isset( $_GET['revision'] ) ? sprintf( __( $this->other_arguments->get( 'singular_name' ) . ' restored to revision from %s' ), wp_post_revision_title( ( int )( $_GET[ 'revision' ] ), false ) ) : false,
-					6 => sprintf( __( $this->other_arguments->get( 'singular_name' ) . ' published. <a href="%s">View ' . $this->other_arguments->get( 'singular_name' ) . '</a>'), esc_url( get_permalink( $post_ID ) ) ),
-					7 => __( $this->other_arguments->get( 'singular_name' ) . ' saved.' ),
-					8 => sprintf( __( $this->other_arguments->get( 'singular_name' ) . ' submitted. <a target="_blank" href="%s">Preview ' . $this->other_arguments->get( 'singular_name' ) . '</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink( $post_ID ) ) ) ),
-					9 => sprintf( __( $this->other_arguments->get( 'singular_name' ) . ' scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview ' . $this->other_arguments->get( 'singular_name' ) . '</a>'),
-					// translators: Publish box date format, see http://php.net/date
-					date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), esc_url( get_permalink( $post_ID ) ) ),
-					10 => sprintf( __( $this->other_arguments->get( 'singular_name' ) . ' draft updated. <a target="_blank" href="%s">Preview ' . $this->other_arguments->get( 'singular_name' ) . '</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink( $post_ID ) ) ) ),
-				];
-				return $messages;
-			};
+				add_filter
+				(
+					"manage_{$this->slug}_posts_columns",
+					fn( array $columns ) : array => $this->sortColumns( $this->addCustomColumns( $this->removeUnsetItems( $columns ) ) ),
+					10,
+					2
+				);
+
+				add_action( "manage_{$this->slug}_posts_custom_column", $this->generateTableOfContentsRow(), 10, 2 );
+			}
 		}
 
 		private function registerMetaBoxes() : void
 		{
-			$this->meta_boxes = [];
-			$meta_box_data = $this->other_arguments->get( 'meta_boxes' );
-			foreach ( $meta_box_data as $meta_box_item )
+			$this->metaBoxes = [];
+			foreach ( $this->otherArguments->get( 'meta_boxes' ) as $dataItem )
 			{
-				$slug = TestHashItem::getString( $meta_box_item, 'slug', null );
-				$name = TestHashItem::getString( $meta_box_item, 'name', null );
-				unset( $meta_box_item[ 'slug' ], $meta_box_item[ 'name' ] );
+				$slug = TestHashItem::getString( $dataItem, 'slug', null );
+				$name = TestHashItem::getString( $dataItem, 'name', null );
 				if ( $name && $slug )
 				{
-					$full_slug = $this->other_arguments->get( 'meta_box_prefix' ) . $slug;
-					$meta_box_item[ 'post-type' ] = ( isset( $meta_box_item[ 'post-type' ] ) ) ? $meta_box_item[ 'post-type' ] : $this->slug;
-					$this->meta_boxes[ $slug ] = new WPMetaBox( $full_slug, $name, $meta_box_item );
+					// Remove slug & name from $dataItem, as we will be using it for extra arguments to the WPMetaBox
+					// constructor, which doesn’t take in the slug or name.
+					unset( $dataItem[ 'slug' ], $dataItem[ 'name' ] );
+
+					// Add post type’s prefix to keep these meta boxes from conflicting with other type’s meta boxes.
+					// Think of this as adding a namespace to these meta boxes.
+					$fullSlug = $this->otherArguments->get( 'meta_box_prefix' ) . $slug;
+					$dataItem[ 'post-type' ] = ( isset( $dataItem[ 'post-type' ] ) ) ? $dataItem[ 'post-type' ] : $this->slug;
+					$this->metaBoxes[ $slug ] = new WPMetaBox( $fullSlug, $name, $dataItem );
 				}
 			}
-		}
-	
-		private function generateTableOfContents() : callable
-		{
-			return function( array $columns ) : array
-			{
-				return $this->sortColumns( $this->addCustomColumns( $this->removeUnsetItems( $columns ) ) );
-			};
 		}
 	
 		private function generateTableOfContentsRow() : callable
 		{
 			return function( $column, int $post_id ) : void
 			{
-				$custom_toc_list = $this->other_arguments->get( 'custom_toc' );
-				foreach ( $custom_toc_list as $custom_toc_item )
+				foreach ( $this->otherArguments->get( 'custom_toc' ) as $item )
 				{
-					$full_col_name = $this->slug . '-' . $custom_toc_item[ 'slug' ];
+					$full_col_name = $this->slug . '-' . $item[ 'slug' ];
 					if ( $column == $full_col_name )
 					{
 						// If custom render function exists, just call it.
-						if ( isset( $custom_toc_item[ 'function' ] ) && is_callable( $custom_toc_item[ 'function' ] ) )
+						if ( isset( $item[ 'function' ] ) && is_callable( $item[ 'function' ] ) )
 						{
-							$custom_toc_item[ 'function' ]( $column, $post_id );
+							$item[ 'function' ]( $column, $post_id );
 						}
 						else
 						{
@@ -153,50 +140,75 @@ class WPPostType
 			};
 		}
 
+		private function generateMessagesList() : array
+		{
+			// Merge default messages with user-specified messages.
+			// User-specified messages latter so they override defaults.
+			global $post, $post_ID;
+			$singularName = $this->otherArguments->get( 'singular_name' );
+			return array_merge
+			(
+				[
+					0 => '', // Unused. Messages start @ index 1.
+					1 => sprintf( __( $singularName . ' updated. <a href="%s">View ' . $singularName . '</a>', 'textdomain' ), esc_url( get_permalink( $post_ID ) ) ),
+					2 => __( "$singularName updated.", 'textdomain' ),
+					3 => __( "$singularName deleted.", 'textdomain' ),
+					4 => __( "$singularName updated.", 'textdomain' ),
+					5 => isset( $_GET[ 'revision' ] ) ? sprintf( __( $singularName . ' restored to revision from %s', 'textdomain' ), wp_post_revision_title( ( int )( $_GET[ 'revision' ] ), false ) ) : false,
+					6 => sprintf( __( $singularName . ' published. <a href="%s">View ' . $singularName . '</a>', 'textdomain' ), esc_url( get_permalink( $post_ID ) ) ),
+					7 => __( "$singularName saved.", 'textdomain' ),
+					8 => sprintf( __( $singularName . ' submitted. <a target="_blank" href="%s">Preview ' . $singularName . '</a>', 'textdomain' ), esc_url( add_query_arg( 'preview', 'true', get_permalink( $post_ID ) ) ) ),
+					9 => sprintf( __( $singularName . ' scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview ' . $singularName . '</a>', 'textdomain' ),
+					// translators: Publish box date format, see http://php.net/date
+					date_i18n( __( 'M j, Y @ G:i', 'textdomain' ), strtotime( $post->post_date ) ), esc_url( get_permalink( $post_ID ) ) ),
+					10 => sprintf( __( $singularName . ' draft updated. <a target="_blank" href="%s">Preview ' . $singularName . '</a>', 'textdomain' ), esc_url( add_query_arg( 'preview', 'true', get_permalink( $post_ID ) ) ) ),
+				],
+				$this->otherArguments->get( 'messages' )
+			);
+		}
+
 		private function getSupports()
 		{
-			$supports = $this->other_arguments->get( 'supports' );
+			$supports = $this->otherArguments->get( 'supports' );
 			return ( empty( $supports ) ) ? false : $supports;
 		}
 
 		private function removeUnsetItems( array $columns ) : array
 		{
-			$unset_list = $this->other_arguments->get( 'unset_toc' );
-			foreach ( $unset_list as $unset_key )
+			foreach ( $this->otherArguments->get( 'unset_toc' ) as $item )
 			{
-				unset( $columns[ $unset_key ] );
+				unset( $columns[ $item ] );
 			}
 			return $columns;
 		}
 
 		private function addCustomColumns( array $columns ) : array
 		{
-			$custom_toc_list = $this->other_arguments->get( 'custom_toc' );
-			foreach ( $custom_toc_list as $custom_toc_item )
+			foreach ( $this->otherArguments->get( 'custom_toc' ) as $item )
 			{
-				$columns[ $this->slug . '-' . $custom_toc_item[ 'slug' ] ] = __( $custom_toc_item[ 'name' ] );
+				$columns[ $this->slug . '-' . $item[ 'slug' ] ] = __( $item[ 'name' ], "textdomain" );
 			}
 			return $columns;
 		}
 
 		private function sortColumns( array $columns ) : array
 		{
-			if ( !empty( $this->other_arguments->get( 'toc_order' ) ) )
+			if ( !empty( $this->otherArguments->get( 'toc_order' ) ) )
 			{
-				$ordered_keys = $this->other_arguments->get( 'toc_order' );
+				$orderedKeys = $this->otherArguments->get( 'toc_order' );
 				$sorted = [];
 
 				// If checkbox was not explicitly placed in order box,
 				// assume caller forgot it & still wants it @ the start,
 				// since it looks awkward anywhere else.
-				if ( !in_array( 'cb', $ordered_keys ) && array_key_exists( 'cb', $columns ) )
+				if ( !in_array( 'cb', $orderedKeys ) && array_key_exists( 'cb', $columns ) )
 				{
 					$sorted[ 'cb' ] = $columns[ 'cb' ];
 					unset( $columns[ 'cb' ] ); // Remove so we don’t place in sorted multiple times.
 				}
 
 				// Position ordered keys.
-				foreach ( $ordered_keys as $key )
+				foreach ( $orderedKeys as $key )
 				{
 					if ( array_key_exists( $key, $columns ) )
 					{
@@ -216,16 +228,73 @@ class WPPostType
 			return $columns;
 		}
 
+		private function generateArguments() : array
+		{
+			$args =
+			[
+				'labels' => $this->generateLabels(),
+				'supports' => $this->getSupports()
+			];
+
+			// Always add whatever main arguments are.
+			$mainOptions =
+			[
+				'description',
+				'public',
+				'hierarchical',
+				'rest_base',
+				'menu_position',
+				'register_meta_box_cb',
+				'has_archive',
+				'rewrite',
+				'query_var',
+				'can_export'
+			];
+			foreach ( $mainOptions as $type )
+			{
+				$args[ $type ] = $this->otherArguments->get( $type );
+			}
+
+			// Only add other options if set.
+			$otherOptions =
+			[
+				'label',
+				'exclude_from_search',
+				'publicly_queryable',
+				'show_ui',
+				'show_in_menu',
+				'show_in_nav_menus',
+				'show_in_admin_bar',
+				'show_in_rest',
+				'map_meta_cap',
+				'rest_controller_class',
+				'menu_icon',
+				'capability_type',
+				'capabilities',
+				'taxonomies',
+				'delete_with_user'
+			];
+			foreach ( $otherOptions as $type )
+			{
+				if ( $this->otherArguments->get( $type ) !== null )
+				{
+					$args[ $type ] = $this->otherArguments->get( $type );
+				}
+			}
+
+			return $args;
+		}
+
 		private function generateLabels() : array
 		{
 			// Merge default labels with user-specified labels.
 			// User-specified labels latter so they override defaults.
-			$singularName = $this->other_arguments->get( 'singular_name' );
+			$singularName = $this->otherArguments->get( 'singular_name' );
 			return array_merge
 			(
 				[
 					'name' => __( $this->name ),
-					'singular_name' => __( $this->other_arguments->get( 'singular_name' ) ),
+					'singular_name' => __( $singularName ),
 					'menu_name'             => _x( $this->name, 'Admin Menu text', 'textdomain' ),
 					'name_admin_bar'        => _x( $singularName, 'Add New on Toolbar', 'textdomain' ),
 					'add_new'               => __( 'Add New', 'textdomain' ),
@@ -249,31 +318,107 @@ class WPPostType
 					'items_list_navigation' => _x( $this->name . ' list navigation', 'Screen reader text for the pagination heading on the post type listing screen. Default “Posts list navigation”/”Pages list navigation”. Added in 4.4', 'textdomain' ),
 					'items_list'            => _x( $this->name . ' list', 'Screen reader text for the items list heading on the post type listing screen. Default “Posts list”/”Pages list”. Added in 4.4', 'textdomain' )
 				],
-				$this->other_arguments->get( 'labels' )
+				$this->otherArguments->get( 'labels' )
 			);
 		}
 
-		private static function argumentDefaults( string $slug, string $name ) : array
+		private function generateDefaultArguments() : array
 		{
 			return
 			[
-				'singular_name' => [ 'value' => $name ],
-				'supports' => [ 'value' => [ 'title', 'editor' ] ],
-				'has_archive' => [ 'value' => true ],
-				'public' => [ 'value' => true ],
-				'meta_boxes' => [ 'value' => [] ],
-				'rewrite' => [ 'value' => [ 'slug' => $slug ] ],
-				'meta_box_prefix' => [ 'value' => $slug . '-' ],
-				'custom_toc' => [ 'value' => [] ],
-				'unset_toc' => [ 'value' => [] ],
-				'taxonomies' => [ 'value' => [] ],
-				'capabilities' => [ 'value' => [] ],
-				'labels' => [ 'value' => [] ]
+				'label' => [
+					'value' => null,
+					'type' => 'string',
+					'sanitizer' => 'sanitize_text_field'
+				],
+				'labels' => [
+					'value' => [],
+					'type' => 'array',
+					'sanitizer' => fn( array $list ) => array_map( 'sanitize_text_field', $list )
+				],
+				'description' => [
+					'value' => '',
+					'type' => 'string',
+					'sanitizer' => 'sanitize_text_field'
+				],
+				'public' => [ 'value' => true, 'type' => 'boolean' ], 
+				'hierarchical' => [ 'value' => false, 'type' => 'boolean' ],
+				'exclude_from_search' => [ 'value' => null, 'type' => 'boolean' ],
+				'publicly_queryable' => [ 'value' => null, 'type' => 'boolean' ],
+				'show_ui' => [ 'value' => null, 'type' => 'boolean' ],
+				'show_in_menu' =>
+				[
+					'value' => null,
+					'type' => [ 'boolean', 'string' ],
+					'sanitizer' => fn( $value ) => ( gettype( $value ) === 'string' ) ? sanitize_title( $value ) : $value // Only sanitize if string.
+				],
+				'show_in_nav_menus' => [ 'value' => null, 'type' => 'boolean' ],
+				'show_in_admin_bar' => [ 'value' => null, 'type' => 'boolean' ],
+				'show_in_rest' => [ 'value' => null, 'type' => 'boolean' ],
+				'rest_base' =>
+				[
+					'value' => $this->slug,
+					'type' => 'string',
+					'sanitizer' => 'sanitize_title'
+				],
+				'rest_controller_class' =>
+				[
+					'value' => null,
+					'type' => 'string'
+				],
+				'menu_position' => [ 'value' => null, 'type' => 'integer' ],
+				'menu_icon' => [ 'value' => null, 'type' => 'string' ],
+				'capability_type' => [ 'value' => null, 'type' => 'string', 'sanitizer' => 'sanitize_title' ],
+				'capabilities' =>
+				[
+					'value' => null,
+					'type' => 'array',
+					'sanitizer' => fn( array $list ) => array_map( 'sanitize_title', $list )
+				],
+				'map_meta_cap' => [ 'value' => null, 'type' => 'boolean' ],
+				'supports' =>
+				[
+					'value' => [ 'title', 'editor' ],
+					'type' => 'array',
+					'sanitizer' => fn( array $list ) => array_map( 'sanitize_title', $list )
+				],
+				'register_meta_box_cb' => [ 'value' => null, 'type' => 'callable' ],
+				'taxonomies' =>
+				[
+					'value' => null,
+					'type' => 'array',
+					'sanitizer' => fn( array $list ) => array_map( 'sanitize_title', $list )
+				],
+				'has_archive' => [ 'value' => true, 'type' => 'boolean' ],
+				'rewrite' =>
+				[
+					'value' => [ 'slug' => $this->slug ],
+					'type' => [ 'boolean', 'array' ],
+					'sanitizer' => function( $list ) {
+						if ( gettype( $list ) === 'array' && array_key_exists( 'slug', $list ) ) {
+							$list[ 'slug' ] = sanitize_title( $list[ 'slug' ] );
+						}
+					}
+				],
+				'query_var' =>
+				[
+					'value' => $this->slug,
+					'type' => [ 'boolean', 'string' ],
+					'sanitizer' => fn( $value ) => ( gettype( $value ) === 'string' ) ? sanitize_title( $value ) : $value // Only sanitize if string.
+				],
+				'can_export' => [ 'value' => true, 'type' => 'boolean' ],
+				'delete_with_user' => [ 'value' => null, 'type' => 'boolean' ],
+				'singular_name' => [ 'value' => $this->name, 'type' => 'string', 'sanitizer' => 'sanitize_text_field' ],
+				'meta_boxes' => [ 'value' => [], 'type' => 'array' ],
+				'meta_box_prefix' => [ 'value' => $this->slug . '-', 'type' => 'string', 'sanitizer' => 'sanitize_title' ],
+				'custom_toc' => [ 'value' => [], 'type' => 'array' ],
+				'unset_toc' => [ 'value' => [], 'type' => 'array' ],
+				'messages' => [ 'value' => [], 'type' => 'array' ]
 			];
 		}
 
-		private $slug;
-		private $name;
-		private $meta_boxes;
-		private $other_arguments;
+		private string $slug;
+		private string $name;
+		private array $metaBoxes;
+		private VerifiedArguments $otherArguments;
 }

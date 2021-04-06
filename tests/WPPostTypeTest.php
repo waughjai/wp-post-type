@@ -7,9 +7,11 @@ require_once( 'MockWordPress.php' );
 
 class WPPostTypeTest extends TestCase
 {
-	public function testObjectWorks()
+	public function testSanitizers()
 	{
-		$type = new WPPostType( 'news', 'News' );
-		$this->assertTrue( is_object( $type ) );
+		$type = new WPPostType( ' Næws Items? ', ' Næws Items? ' );
+		$this->assertEquals( 'naews-items', $type->getSlug() );
+		$this->assertEquals( 'Næws Items?', $type->getName() );
+		$this->assertEquals( 'Næws Items?', $type->getSingularName() );
 	}
 }
